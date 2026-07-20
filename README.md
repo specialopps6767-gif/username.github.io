@@ -30,16 +30,16 @@ A professional, interactive website for Luxxe Auto Detailings, showcasing profes
 ## 📋 Pricing Structure
 
 ### Interior Detailing
-- Sedan / Hatchback / Coupe: **$40**
-- SUV / Utes: **$50**
+- Sedan / Hatchback / Coupe: **$50**
+- SUV / Utes: **$70**
 
 ### Exterior Washing
 - Sedan / Hatchback / Coupe: **+$10**
 - SUV / Utes: **+$10**
 
 ### Combined Package (Most Popular)
-- Sedan / Coupe / Hatchback: **$90** (Save $10!)
-- SUV / Utes: **$100** (Save $10!)
+- Sedan / Coupe / Hatchback: **$100** (Save $10!)
+- SUV / Utes: **$120** (Save $10!)
 
 ## 📁 Files
 
@@ -194,7 +194,7 @@ Works on all modern browsers:
 ## 📧 Contact Information
 
 - **Email:** luxxeautodetailings@gmail.com
-- **Phone:** +61 468 397 434
+- **Phone:** +61 461 594 295
 - **Service:** Mobile service available
 
 ## 💡 Tips for Success
