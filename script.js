@@ -1,203 +1,155 @@
-// Smooth scrolling function
+// Used by the "View Pricing" button in index.html
 function scrollToSection(sectionId) {
     const section = document.getElementById(sectionId);
-    if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (section) section.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Navigation link click handlers
-document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const href = link.getAttribute('href');
-        if (href.startsWith('#')) {
-            scrollToSection(href.substring(1));
-        }
-    });
-});
+(() => {
+    const $ = (s, c = document) => c.querySelector(s);
+    const $$ = (s, c = document) => [...c.querySelectorAll(s)];
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-// Hamburger menu toggle
-const hamburger = document.querySelector('.hamburger');
-const navLinks = document.querySelector('.nav-links');
+    // Scroll progress bar + navbar shrink
+    const bar = document.createElement('div');
+    bar.className = 'scroll-progress';
+    document.body.append(bar);
+    const nav = $('.navbar');
+    const onScroll = () => {
+        const h = document.documentElement;
+        bar.style.transform = `scaleX(${h.scrollTop / (h.scrollHeight - h.clientHeight || 1)})`;
+        if (nav) nav.classList.toggle('scrolled', h.scrollTop > 30);
+    };
+    addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
 
-if (hamburger) {
-    hamburger.addEventListener('click', () => {
-        navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
-        hamburger.classList.toggle('active');
-    });
-}
-
-// Add scroll animation to elements
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -100px 0px'
-};
-
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-            observer.unobserve(entry.target);
-        }
-    });
-}, observerOptions);
-
-// Observe all cards and items for animation
-document.querySelectorAll('.service-card, .pricing-card, .contact-item, .feature').forEach(el => {
-    if (!el.style.opacity) {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(30px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    // Mobile menu
+    const burger = $('.hamburger');
+    const links = $('.nav-links');
+    if (burger && links) {
+        const close = () => { burger.classList.remove('active'); links.classList.remove('open'); };
+        burger.addEventListener('click', () => { burger.classList.toggle('active'); links.classList.toggle('open'); });
+        $$('a', links).forEach(a => a.addEventListener('click', close));
     }
-    observer.observe(el);
-});
 
-// Update nav link active state on scroll
-window.addEventListener('scroll', () => {
-    const sections = document.querySelectorAll('section[id]');
-    const scrollY = window.pageYOffset;
-
-    sections.forEach(section => {
-        const sectionHeight = section.offsetHeight;
-        const sectionTop = section.offsetTop - 100;
-        const sectionId = section.getAttribute('id');
-        const navLink = document.querySelector(`.nav-link[href="#${sectionId}"]`);
-
-        if (navLink && scrollY > sectionTop && scrollY <= sectionTop + sectionHeight) {
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.style.color = 'var(--light-text)';
+    // Highlight the nav link for the section in view
+    const navLinks = $$('.nav-link[href^="#"]');
+    const sections = navLinks.map(a => $(a.getAttribute('href'))).filter(Boolean);
+    if (sections.length) {
+        const spy = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+                }
             });
-            navLink.style.color = 'var(--primary-gold)';
+        }, { rootMargin: '-45% 0px -50% 0px' });
+        sections.forEach(s => spy.observe(s));
+    }
+
+    // Reveal on scroll
+    const revealSel = '.section-title, .gallery-subtitle, .pricing-subtitle, .contact-subtitle, .about-content > *, .feature, .service-card, .gallery-item, .pricing-card, .pricing-note, .contact-item, .contact-form';
+    if (!reduce && 'IntersectionObserver' in window) {
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+        }, { threshold: 0.15 });
+        $$(revealSel).forEach(el => {
+            const i = [...el.parentElement.children].indexOf(el);
+            el.style.setProperty('--d', (i % 5) * 0.08 + 's');
+            el.classList.add('reveal');
+            io.observe(el);
+        });
+    }
+
+    // Desktop-only effects: card tilt, hero spotlight, magnetic buttons
+    if (fine && !reduce) {
+        $$('.service-card, .pricing-card, .contact-item').forEach(card => {
+            card.classList.add('tilt');
+            card.addEventListener('mousemove', e => {
+                const r = card.getBoundingClientRect();
+                const x = (e.clientX - r.left) / r.width;
+                const y = (e.clientY - r.top) / r.height;
+                card.style.setProperty('--ry', ((x - 0.5) * 10) + 'deg');
+                card.style.setProperty('--rx', ((0.5 - y) * 10) + 'deg');
+                card.style.setProperty('--gx', x * 100 + '%');
+                card.style.setProperty('--gy', y * 100 + '%');
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.setProperty('--rx', '0deg');
+                card.style.setProperty('--ry', '0deg');
+            });
+        });
+
+        const hero = $('.hero');
+        if (hero) {
+            hero.addEventListener('mousemove', e => {
+                const r = hero.getBoundingClientRect();
+                hero.style.setProperty('--mx', e.clientX - r.left + 'px');
+                hero.style.setProperty('--my', e.clientY - r.top + 'px');
+            });
         }
-    });
-});
 
-// Add hover effect to pricing cards
-document.querySelectorAll('.pricing-item').forEach(item => {
-    item.addEventListener('mouseenter', function() {
-        this.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
-    });
-    item.addEventListener('mouseleave', function() {
-        this.style.backgroundColor = 'rgba(212, 175, 55, 0.05)';
-    });
-});
+        $$('.cta-button, .submit-btn').forEach(btn => {
+            btn.addEventListener('mousemove', e => {
+                const r = btn.getBoundingClientRect();
+                btn.style.setProperty('--tx', (e.clientX - r.left - r.width / 2) * 0.2 + 'px');
+                btn.style.setProperty('--ty', (e.clientY - r.top - r.height / 2) * 0.3 + 'px');
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.setProperty('--tx', '0px');
+                btn.style.setProperty('--ty', '0px');
+            });
+        });
+    }
 
-// Contact form handler
-const contactForm = document.getElementById('contactForm');
-if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        const formData = new FormData(contactForm);
-        const inputs = contactForm.querySelectorAll('input, textarea');
-        
-        // Show success message
-        const originalHTML = contactForm.innerHTML;
-        contactForm.innerHTML = '<p style="color: #d4af37; text-align: center; font-size: 1.2rem; font-weight: 600;">Thank you for reaching out! We will get back to you soon.</p>';
-        
-        // Reset form after 3 seconds
-        setTimeout(() => {
-            contactForm.innerHTML = originalHTML;
-            inputs.forEach(input => input.value = '');
-            attachFormListeners();
-        }, 3000);
+    // Click ripple on buttons
+    $$('.cta-button, .submit-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            const r = btn.getBoundingClientRect();
+            const size = Math.max(r.width, r.height);
+            const dot = document.createElement('span');
+            dot.className = 'ripple';
+            dot.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
+            btn.append(dot);
+            setTimeout(() => dot.remove(), 700);
+        });
     });
-}
 
-// Reattach form listeners after reset
-function attachFormListeners() {
-    const contactForm = document.getElementById('contactForm');
-    if (contactForm) {
-        contactForm.addEventListener('submit', (e) => {
+    // Gallery lightbox
+    const items = $$('.gallery-item');
+    if (items.length) {
+        const box = document.createElement('div');
+        box.className = 'lightbox';
+        box.innerHTML = '<img alt="">';
+        document.body.append(box);
+        const big = $('img', box);
+        const shut = () => box.classList.remove('open');
+        items.forEach(item => item.addEventListener('click', () => {
+            const img = $('img', item);
+            if (!img) return;
+            big.src = img.currentSrc || img.src;
+            big.alt = img.alt;
+            box.classList.add('open');
+        }));
+        box.addEventListener('click', shut);
+        addEventListener('keydown', e => { if (e.key === 'Escape') shut(); });
+    }
+
+    // Contact cards open their link when clicked
+    $$('.contact-item').forEach(item => {
+        item.addEventListener('click', e => {
+            if (e.target.closest('a')) return;
+            const link = $('a', item);
+            if (link) link.click();
+        });
+    });
+
+    // Contact form: shows a thank-you message, then resets
+    const form = document.getElementById('contactForm');
+    if (form) {
+        form.addEventListener('submit', e => {
             e.preventDefault();
-            
-            const inputs = contactForm.querySelectorAll('input, textarea');
-            const originalHTML = contactForm.innerHTML;
-            contactForm.innerHTML = '<p style="color: #d4af37; text-align: center; font-size: 1.2rem; font-weight: 600;">Thank you for reaching out! We will get back to you soon.</p>';
-            
-            setTimeout(() => {
-                contactForm.innerHTML = originalHTML;
-                inputs.forEach(input => input.value = '');
-                attachFormListeners();
-            }, 3000);
+            form.classList.add('sent');
+            setTimeout(() => { form.reset(); form.classList.remove('sent'); }, 3500);
         });
     }
-}
-
-// Parallax effect on hero section - subtle gradient shift
-window.addEventListener('scroll', () => {
-    const hero = document.querySelector('.hero');
-    if (hero) {
-        const scrollY = window.scrollY;
-        hero.style.transform = `translateY(${scrollY * 0.3}px)`;
-    }
-});
-
-// Smooth scroll behavior for internal links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    });
-});
-
-// Add click handler to contact info
-document.querySelectorAll('.contact-item').forEach(item => {
-    item.addEventListener('click', function() {
-        const link = this.querySelector('a');
-        if (link) {
-            link.click();
-        }
-    });
-});
-
-// Initialize animations on page load
-window.addEventListener('load', () => {
-    // Trigger initial animations
-    document.querySelectorAll('.service-card, .pricing-card, .contact-item').forEach((el, index) => {
-        const delay = index * 0.1;
-        el.style.animationDelay = `${delay}s`;
-    });
-    
-    // Add a subtle glow effect to gold elements on hover
-    document.querySelectorAll('.pricing-item, .feature').forEach(el => {
-        el.addEventListener('mouseenter', function() {
-            this.style.boxShadow = '0 5px 15px rgba(212, 175, 55, 0.3)';
-        });
-        el.addEventListener('mouseleave', function() {
-            this.style.boxShadow = 'none';
-        });
-    });
-});
-
-// Performance optimization: throttle scroll events
-let ticking = false;
-window.addEventListener('scroll', () => {
-    if (!ticking) {
-        window.requestAnimationFrame(() => {
-            // Animation frame for smooth scrolling
-            ticking = false;
-        });
-        ticking = true;
-    }
-});
-
-// Add mobile menu close on nav link click
-document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', () => {
-        const navLinks = document.querySelector('.nav-links');
-        const hamburger = document.querySelector('.hamburger');
-        if (navLinks && hamburger) {
-            navLinks.style.display = 'none';
-            hamburger.classList.remove('active');
-        }
-    });
-});
+})();
